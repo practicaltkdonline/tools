@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>港幣數鈔機</title>
+    
+    <!-- PWA 設定 -->
+    <meta name="theme-color" content="#00c16a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="港幣數鈔機">
+    
+    <link rel="manifest" href="data:application/manifest+json,{
+        %7B%22name%22%3A%22%E6%B8%AF%E5%B9%A3%E6%95%B8%E9%88%94%E6%A9%9F%22%2C%22short_name%22%3A%22%E6%95%B8%E9%88%94%E6%A9%9F%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%2300c16a%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fvia.placeholder.com%2F192x192%2F00c16a%2Fffffff%3Ftext%3D%25E6%2595%25B8%25E9%2588%2594%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fpng%22%7D%2C%7B%22src%22%3A%22https%3A%2F%2Fvia.placeholder.com%2F512x512%2F00c16a%2Fffffff%3Ftext%3D%25E6%2595%25B8%25E9%2588%2594%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
+    
+    <style>
+        :root {
+            --primary: #00c16a;
+            --danger: #ff4757;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            min-height: 100vh;
+            padding: 12px;
+        }
+        .container {
+            max-width: 640px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, var(--primary), #00a65a);
+            color: white;
+            padding: 28px 20px;
+            text-align: center;
+        }
+        .total { font-size: 3rem; font-weight: 700; letter-spacing: 1px; }
+        .total-label { font-size: 1.1rem; opacity: 0.95; margin-bottom: 10px; }
+
+        .main { padding: 22px; }
+
+        #amount-group {
+            margin-bottom: 24px;
+            background: #f8f9fa;
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 16px;
+            font-size: 1.15rem;
+            cursor: pointer;
+        }
+        .collapse-icon {
+            transition: transform 0.3s ease;
+            font-size: 1.1rem;
+        }
+        #amount-group.collapsed .collapse-icon {
+            transform: rotate(-90deg);
+        }
+        .group-content { transition: all 0.3s ease; }
+        #amount-group.collapsed .group-content { display: none; }
+
+        .denom, .cheque-item {
+            display: flex;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .denom:last-child, .cheque-item:last-child { border-bottom: none; }
+
+        .denom-value {
+            font-weight: 700;
+            font-size: 1.35rem;
+            min-width: 88px;
+        }
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        button {
+            width: 52px; height: 52px;
+            border: none; border-radius: 50%;
+            font-size: 1.6rem; font-weight: bold;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-minus { background: var(--danger); color: white; }
+        .btn-plus { background: var(--primary); color: white; }
+
+        .count-input, .cheque-input {
+            text-align: center;
+            font-size: 1.35rem;
+            font-weight: 600;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 14px;
+        }
+        .count-input { width: 92px; }
+        .cheque-input { width: 140px; }
+
+        .amount, .cheque-amount {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 1.25rem;
+            min-width: 120px;
+            text-align: right;
+        }
+
+        .cheque-item { gap: 12px; }
+        .cheque-name {
+            font-weight: 600;
+            min-width: 100px;
+            color: #555;
+        }
+        .cheque-delete {
+            width: 36px; height: 36px;
+            background: #eee;
+            color: #666;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .target-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .target-input-wrapper {
+            position: relative;
+            flex: 1;
+            max-width: 280px;
+        }
+        .target-input-wrapper::before {
+            content: "HK$";
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+            font-weight: 600;
+        }
+        #target {
+            width: 100%;
+            padding: 16px 16px 16px 58px;
+            font-size: 1.4rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 14px;
+            font-weight: 600;
+        }
+
+        .difference {
+            font-size: 1.6rem;
+            font-weight: 700;
+            text-align: center;
+            padding: 22px;
+            border-radius: 16px;
+        }
+        .positive { color: #00c16a; background: #e8f9f0; }
+        .negative { color: #ff4757; background: #ffe8e8; }
+
+        .footer {
+            padding: 20px;
+            display: flex;
+            gap: 14px;
+        }
+        .btn {
+            flex: 1;
+            padding: 18px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+        }
+        .btn-clear { background: #f1f2f6; color: #555; }
+        .btn-summary { background: #2f3542; color: white; }
+
+        /* Modal 樣式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            max-width: 520px;
+            width: 90%;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            position: relative;
+            padding: 24px;
+        }
+        .modal-header {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        .modal-close {
+            position: absolute;
+            top: 18px;
+            right: 22px;
+            font-size: 2rem;
+            cursor: pointer;
+            color: #aaa;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        .modal-close:hover {
+            color: #ff4757;
+            background: #f8f9fa;
+        }
+
+        .close-btn {
+            display: block;
+            margin: 25px auto 0;
+            width: 65%;
+            max-width: 280px;
+            padding: 14px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .close-btn:hover {
+            background: #00a65a;
+            transform: translateY(-2px);
+        }
+
+        #modalContent, #confirmContent {
+            padding: 10px 0;
+            line-height: 1.6;
+        }
+
+        .confirm-actions {
+            display: flex;
+            gap: 12px;
+            padding: 20px 0;
+        }
+        .confirm-btn {
+            flex: 1;
+            padding: 16px;
+            font-size: 1.15rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+        }
+        .confirm-cancel { background: #f1f2f6; color: #333; }
+        .confirm-delete { background: var(--danger); color: white; }
+
+        @media (max-width: 620px) {
+            .amount, .cheque-amount { display: none; }
+            .cheque-input { width: 120px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="total-label">總金額</div>
+            <div class="total" id="total">HK$ 0</div>
+        </div>
+
+        <div class="main">
+            <div class="section" id="amount-group">
+                <div class="section-header" onclick="toggleGroup()">
+                    <strong>金額設定</strong>
+                    <span class="collapse-icon">▼</span>
+                </div>
+                <div class="group-content">
+                    <div class="target-row" style="margin-bottom: 20px;">
+                        <label>目標：</label>
+                        <div class="target-input-wrapper">
+                            <input type="number" id="target" value="0" step="0.1" oninput="calculate()">
+                        </div>
+                    </div>
+                    <div class="difference" id="difference">HK$ 0</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <strong>數鈔票 / 硬幣</strong>
+                </div>
+                <div id="denominations"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <strong>支票</strong>
+                    <button onclick="addCheque()" style="width:40px;height:40px;font-size:1.4rem;border-radius:50%;background:var(--primary);color:white;border:none;">+</button>
+                </div>
+                <div id="cheques"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <button class="btn btn-clear" onclick="showClearConfirm()">清空全部</button>
+            <button class="btn btn-summary" onclick="showSummaryModal()">📋 查看細明</button>
+        </div>
+    </div>
+
+    <!-- 總結彈窗 -->
+    <div class="modal" id="summaryModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('summaryModal')">×</span>
+            <div class="modal-header">數鈔結果</div>
+            <div id="modalContent"></div>
+            <button class="close-btn" onclick="closeModal('summaryModal')">關閉</button>
+        </div>
+    </div>
+
+    <!-- 通用確認彈窗 -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-content">
+            <div class="modal-header" id="confirmTitle">確認操作</div>
+            <div id="confirmContent"></div>
+            <div class="confirm-actions">
+                <button class="confirm-btn confirm-cancel" onclick="closeModal('confirmModal')">取消</button>
+                <button class="confirm-btn confirm-delete" id="confirmActionBtn">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const denominations = [
+            { value: 1000, label: "1000" }, { value: 500, label: "500" },
+            { value: 100, label: "100" }, { value: 50, label: "50" },
+            { value: 20, label: "20" }, { value: 10, label: "10" },
+            { value: 5, label: "5" }, { value: 2, label: "2" }, { value: 1, label: "1" }
+        ];
+
+        let counts = {};
+        let cheques = [];
+        let pendingDeleteIndex = -1;
+
+        function formatAmount(amount) {
+            return amount.toLocaleString('zh-HK', {
+                minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function init() {
+            denominations.forEach(d => counts[d.value] = 0);
+            renderDenominations();
+            renderCheques();
+            document.getElementById('amount-group').classList.add('collapsed');
+            calculate();
+        }
+
+        function renderDenominations() {
+            const container = document.getElementById('denominations');
+            container.innerHTML = '';
+            denominations.forEach(denom => {
+                const div = document.createElement('div');
+                div.className = 'denom';
+                div.innerHTML = `
+                    <div class="denom-value">$${denom.label}</div>
+                    <div class="controls">
+                        <button class="btn-minus" onclick="changeCount(${denom.value}, -1)">−</button>
+                        <input type="number" class="count-input" id="input-${denom.value}" value="0" min="0" oninput="setCount(${denom.value}, this.value)">
+                        <button class="btn-plus" onclick="changeCount(${denom.value}, 1)">+</button>
+                    </div>
+                    <div class="amount" id="amount-${denom.value}">HK$ 0</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderCheques() {
+            const container = document.getElementById('cheques');
+            container.innerHTML = '';
+            cheques.forEach((cheque, index) => {
+                const div = document.createElement('div');
+                div.className = 'cheque-item';
+                div.innerHTML = `
+                    <div class="cheque-name">支票${index + 1}</div>
+                    <input type="number" class="cheque-input" value="${cheque.amount}" step="0.1" oninput="updateCheque(${index}, this.value)">
+                    <button class="cheque-delete" onclick="showDeleteConfirm(${index})">×</button>
+                    <div class="cheque-amount" id="cheque-amount-${index}">HK$ ${formatAmount(cheque.amount)}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function addCheque() {
+            cheques.push({ amount: 0 });
+            renderCheques();
+            calculate();
+        }
+
+        function updateCheque(index, value) {
+            cheques[index].amount = parseFloat(value) || 0;
+            calculate();
+        }
+
+        function showDeleteConfirm(index) {
+            pendingDeleteIndex = index;
+            document.getElementById('confirmTitle').textContent = '刪除支票';
+            document.getElementById('confirmContent').innerHTML = `
+                <p style="text-align:center; font-size:1.1rem; padding:20px 0;">
+                    確定要刪除支票${index + 1}嗎？<br><br>
+                    此操作無法復原。
+                </p>`;
+            document.getElementById('confirmActionBtn').textContent = '確定刪除';
+            document.getElementById('confirmActionBtn').onclick = executeDeleteCheque;
+            document.getElementById('confirmModal').style.display = 'flex';
+        }
+
+        function executeDeleteCheque() {
+            if (pendingDeleteIndex >= 0) {
+                cheques.splice(pendingDeleteIndex, 1);
+                renderCheques();
+                calculate();
+            }
+            closeModal('confirmModal');
+            pendingDeleteIndex = -1;
+        }
+
+        function changeCount(value, delta) {
+            counts[value] = Math.max(0, (counts[value] || 0) + delta);
+            document.getElementById(`input-${value}`).value = counts[value];
+            calculate();
+        }
+
+        function setCount(value, qty) {
+            counts[value] = Math.max(0, parseInt(qty) || 0);
+            calculate();
+        }
+
+        function calculate() {
+            let total = 0;
+            Object.keys(counts).forEach(key => total += parseFloat(key) * counts[key]);
+            cheques.forEach(c => total += c.amount);
+
+            document.getElementById('total').textContent = `HK$ ${formatAmount(total)}`;
+
+            Object.keys(counts).forEach(key => {
+                const val = parseFloat(key);
+                const amtEl = document.getElementById(`amount-${val}`);
+                if (amtEl) amtEl.textContent = `HK$ ${formatAmount(val * counts[val])}`;
+            });
+
+            cheques.forEach((c, i) => {
+                const el = document.getElementById(`cheque-amount-${i}`);
+                if (el) el.textContent = `HK$ ${formatAmount(c.amount)}`;
+            });
+
+            const target = parseFloat(document.getElementById('target').value) || 0;
+            const diff = total - target;
+            const diffEl = document.getElementById('difference');
+
+            if (diff > 0) {
+                diffEl.innerHTML = `多出 HK$ ${formatAmount(diff)}`;
+                diffEl.className = 'difference positive';
+            } else if (diff < 0) {
+                diffEl.innerHTML = `缺少 HK$ ${formatAmount(Math.abs(diff))}`;
+                diffEl.className = 'difference negative';
+            } else {
+                diffEl.innerHTML = `剛好 HK$ 0`;
+                diffEl.className = 'difference';
+            }
+        }
+
+        function toggleGroup() {
+            document.getElementById('amount-group').classList.toggle('collapsed');
+        }
+
+        function showClearConfirm() {
+            document.getElementById('confirmTitle').textContent = '確認清空';
+            document.getElementById('confirmContent').innerHTML = `
+                <p style="text-align:center; font-size:1.1rem; padding:20px 0;">
+                    ⚠️ 確定要清空所有資料嗎？<br><br>
+                    此操作無法復原。
+                </p>`;
+            document.getElementById('confirmActionBtn').textContent = '確定清空';
+            document.getElementById('confirmActionBtn').onclick = executeClearAll;
+            document.getElementById('confirmModal').style.display = 'flex';
+        }
+
+        function executeClearAll() {
+            Object.keys(counts).forEach(key => counts[key] = 0);
+            cheques = [];
+            renderDenominations();
+            renderCheques();
+            document.getElementById('target').value = 0;
+            calculate();
+            closeModal('confirmModal');
+        }
+
+        function showSummaryModal() {
+            const total = document.getElementById('total').textContent;
+            const target = parseFloat(document.getElementById('target').value) || 0;
+            const diffEl = document.getElementById('difference').innerHTML;
+
+            let html = `<p><strong>總金額：</strong> ${total}</p>`;
+            if (target > 0) html += `<p><strong>目標金額：</strong> HK$ ${formatAmount(target)}</p>`;
+            html += `<p><strong>差額：</strong> ${diffEl}</p><hr style="margin:20px 0;">`;
+            html += `<p style="margin-bottom:14px;"><strong>明細：</strong></p>`;
+
+            denominations.forEach(d => {
+                if (counts[d.value] > 0) {
+                    const amount = d.value * counts[d.value];
+                    html += `<div style="display:flex;justify-content:space-between;padding:6px 0;">
+                        <span>$${d.label} × ${counts[d.value]}</span>
+                        <span style="font-weight:700;">HK$ ${formatAmount(amount)}</span>
+                    </div>`;
+                }
+            });
+
+            if (cheques.length > 0) {
+                html += `<p style="margin:12px 0 6px 0; font-weight:600;">支票：</p>`;
+                cheques.forEach((c, i) => {
+                    if (c.amount > 0) {
+                        html += `<div style="display:flex;justify-content:space-between;padding:6px 0;">
+                            <span>支票${i+1}</span>
+                            <span style="font-weight:700;">HK$ ${formatAmount(c.amount)}</span>
+                        </div>`;
+                    }
+                });
+            }
+
+            document.getElementById('modalContent').innerHTML = html;
+            document.getElementById('summaryModal').style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('data:application/javascript,'
+                + 'self.addEventListener("install", () => self.skipWaiting());'
+                + 'self.addEventListener("activate", () => self.clients.claim());'
+                + 'self.addEventListener("fetch", e => { e.respondWith(fetch(e.request)); });'
+            ).then(() => console.log('✅ PWA Service Worker 已註冊'));
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
