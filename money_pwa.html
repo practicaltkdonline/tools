@@ -2,8 +2,18 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>港幣數鈔機</title>
+    
+    <!-- PWA 設定 -->
+    <meta name="theme-color" content="#00c16a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="港幣數鈔機">
+    
+    <link rel="manifest" href="data:application/manifest+json,{
+        %7B%22name%22%3A%22%E6%B8%AF%E5%B9%A3%E6%95%B8%E9%88%94%E6%A9%9F%22%2C%22short_name%22%3A%22%E6%95%B8%E9%88%94%E6%A9%9F%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%2300c16a%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fvia.placeholder.com%2F192x192%2F00c16a%2Fffffff%3Ftext%3D%25E6%2595%25B8%25E9%2588%2594%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fpng%22%7D%2C%7B%22src%22%3A%22https%3A%2F%2Fvia.placeholder.com%2F512x512%2F00c16a%2Fffffff%3Ftext%3D%25E6%2595%25B8%25E9%2588%2594%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
+    
     <style>
         :root {
             --primary: #00c16a;
@@ -15,6 +25,7 @@
             background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
             min-height: 100vh;
             padding: 12px;
+            touch-action: manipulation; /* 額外加強防止雙擊 */
         }
         .container {
             max-width: 640px;
@@ -227,7 +238,6 @@
             background: #f8f9fa;
         }
 
-        /* 修改後的關閉按鈕：置中 + 圓角長方形 */
         .close-btn {
             display: block;
             margin: 25px auto 0;
@@ -328,7 +338,6 @@
             <span class="modal-close" onclick="closeModal('summaryModal')">×</span>
             <div class="modal-header">數鈔結果</div>
             <div id="modalContent"></div>
-            <!-- 置中圓角長方形關閉按鈕 -->
             <button class="close-btn" onclick="closeModal('summaryModal')">關閉</button>
         </div>
     </div>
@@ -550,6 +559,15 @@
 
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
+        }
+
+        // PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('data:application/javascript,'
+                + 'self.addEventListener("install", () => self.skipWaiting());'
+                + 'self.addEventListener("activate", () => self.clients.claim());'
+                + 'self.addEventListener("fetch", e => { e.respondWith(fetch(e.request)); });'
+            );
         }
 
         window.onload = init;
