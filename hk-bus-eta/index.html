@@ -1,1 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>香港巴士到站時間查詢</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>🚌 香港巴士到站查詢</h1>
+      <p class="subtitle">九巴 / 龍運 · 簡單查路線 · 最近 3 班車</p>
+    </header>
 
+    <!-- Step 1: 輸入路線 -->
+    <section class="card" id="step1">
+      <label for="routeInput">輸入路線號碼</label>
+      <div class="input-row">
+        <input type="text" id="routeInput" placeholder="例如：1A、96、290X" autocomplete="off" />
+        <button id="searchBtn">查詢</button>
+      </div>
+      <p class="hint">支援九巴及龍運路線</p>
+    </section>
+
+    <!-- Step 2: 選擇方向 / 終點 -->
+    <section class="card hidden" id="step2">
+      <h2>選擇方向</h2>
+      <div id="directionList" class="choice-list"></div>
+      <button class="back-btn" onclick="goBack(1)">← 返回</button>
+    </section>
+
+    <!-- Step 3: 選擇車站 -->
+    <section class="card hidden" id="step3">
+      <h2>選擇車站</h2>
+      <p id="selectedRouteInfo" class="route-info"></p>
+      
+      <div class="stop-select-row">
+        <select id="stopSelect">
+          <option value="">— 請選擇車站 —</option>
+        </select>
+      </div>
+
+      <div id="stopList" class="stop-list"></div>
+      <button class="back-btn" onclick="goBack(2)">← 返回</button>
+    </section>
+
+    <!-- Step 4: 到站時間 -->
+    <section class="card hidden" id="step4">
+      <h2>到站時間</h2>
+      <p id="etaRouteInfo" class="route-info"></p>
+      <div id="etaResult" class="eta-box">
+        <div class="loading">載入中...</div>
+      </div>
+      <button class="refresh-btn" id="refreshEtaBtn">🔄 重新整理</button>
+      <button class="back-btn" onclick="goBack(3)">← 返回選車站</button>
+    </section>
+
+    <footer>
+      <p>資料來源：<a href="https://data.gov.hk" target="_blank" rel="noopener">DATA.GOV.HK</a> · 九巴 / 龍運開放數據</p>
+      <p class="note">到站時間每約 1 分鐘更新 · 僅供參考</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
