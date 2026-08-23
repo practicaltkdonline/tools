@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>香港巴士到站時間查詢</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -10,77 +10,57 @@
   <div class="app">
     <header>
       <h1>🚌 香港巴士到站查詢</h1>
-      <p class="subtitle">九巴 / 龍運 · 簡單查路線 · 最近 3 班車</p>
+      <p class="subtitle">九巴 / 龍運 / 城巴 · 到站時間 · 車程估算</p>
     </header>
 
-    <!-- Step 1: 輸入路線 -->
-    <section class="card" id="step1">
-      <label for="routeInput">輸入路線號碼</label>
+    <!-- 永遠顯示：路線輸入 -->
+    <section class="card route-card">
       <div class="input-row">
-        <input type="text" id="routeInput" placeholder="例如：1A、96、290X" autocomplete="off" />
+        <input type="text" id="routeInput" placeholder="輸入路線號碼，例如 170" autocomplete="off" />
         <button id="searchBtn">查詢</button>
       </div>
-      <p class="hint">支援九巴及龍運路線</p>
     </section>
 
-    <!-- Step 2: 選擇方向 / 終點 -->
-    <section class="card hidden" id="step2">
-      <h2>選擇方向</h2>
-      <div id="directionList" class="choice-list"></div>
-      <button class="back-btn" onclick="goBack(1)">← 返回</button>
+    <!-- 方向按鈕（查詢後永遠顯示，方便切換） -->
+    <div id="directionBar" class="direction-bar hidden"></div>
+
+    <!-- 目前方向資訊 -->
+    <p id="currentDirInfo" class="route-info hidden"></p>
+
+    <!-- 車站列表（主畫面） -->
+    <section id="mainView" class="hidden">
+      <div id="stopList" class="stop-list"></div>
     </section>
 
-    <!-- Step 3: 選擇車站 + 計算車程 -->
-    <section class="card hidden" id="step3">
-      <h2>選擇車站</h2>
-      <p id="selectedRouteInfo" class="route-info"></p>
-      
-      <div class="stop-select-row">
-        <select id="stopSelect">
-          <option value="">— 請選擇車站（查看到站時間）—</option>
+    <!-- 計算車程畫面 -->
+    <section id="journeyView" class="card hidden">
+      <h2>📍 計算車程</h2>
+
+      <div class="journey-row">
+        <label>上車站（起點）</label>
+        <select id="fromStopSelect">
+          <option value="">— 選擇上車站 —</option>
+        </select>
+      </div>
+      <div class="journey-row">
+        <label>落車站（終點）</label>
+        <select id="toStopSelect">
+          <option value="">— 選擇落車站 —</option>
         </select>
       </div>
 
-      <div id="stopList" class="stop-list"></div>
+      <button id="calcJourneyBtn" class="calc-btn">計算車程</button>
+      <div id="journeyResult" class="journey-result hidden"></div>
 
-      <!-- 計算車程 -->
-      <div class="journey-section">
-        <h3>📍 計算車程時間</h3>
-        <p class="hint">選擇兩個車站，估算中間車程（歷史平均）</p>
-        <div class="journey-row">
-          <label>上車站</label>
-          <select id="fromStopSelect">
-            <option value="">— 選擇上車站 —</option>
-          </select>
-        </div>
-        <div class="journey-row">
-          <label>落車站</label>
-          <select id="toStopSelect">
-            <option value="">— 選擇落車站 —</option>
-          </select>
-        </div>
-        <button id="calcJourneyBtn" class="calc-btn">計算車程</button>
-        <div id="journeyResult" class="journey-result hidden"></div>
-      </div>
-
-      <button class="back-btn" onclick="goBack(2)">← 返回</button>
+      <button class="back-btn" id="backToStopsBtn">← 返回車站列表</button>
     </section>
 
-
-    <!-- Step 4: 到站時間 -->
-    <section class="card hidden" id="step4">
-      <h2>到站時間</h2>
-      <p id="etaRouteInfo" class="route-info"></p>
-      <div id="etaResult" class="eta-box">
-        <div class="loading">載入中...</div>
-      </div>
-      <button class="refresh-btn" id="refreshEtaBtn">🔄 重新整理</button>
-      <button class="back-btn" onclick="goBack(3)">← 返回選車站</button>
-    </section>
+    <!-- 右下角浮動按鈕 -->
+    <button id="fabJourney" class="fab hidden" title="計算車程">🗺️</button>
 
     <footer>
-      <p>資料來源：<a href="https://data.gov.hk" target="_blank" rel="noopener">DATA.GOV.HK</a> · 九巴 / 龍運開放數據</p>
-      <p class="note">到站時間每約 1 分鐘更新 · 僅供參考</p>
+      <p>資料來源：DATA.GOV.HK · 九巴 / 龍運 / 城巴</p>
+      <p class="note">到站時間約每 1 分鐘更新 · 車程為歷史平均估算</p>
     </footer>
   </div>
 
