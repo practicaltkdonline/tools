@@ -30,20 +30,42 @@
       <button class="back-btn" onclick="goBack(1)">← 返回</button>
     </section>
 
-    <!-- Step 3: 選擇車站 -->
+    <!-- Step 3: 選擇車站 + 計算車程 -->
     <section class="card hidden" id="step3">
       <h2>選擇車站</h2>
       <p id="selectedRouteInfo" class="route-info"></p>
       
       <div class="stop-select-row">
         <select id="stopSelect">
-          <option value="">— 請選擇車站 —</option>
+          <option value="">— 請選擇車站（查看到站時間）—</option>
         </select>
       </div>
 
       <div id="stopList" class="stop-list"></div>
+
+      <!-- 計算車程 -->
+      <div class="journey-section">
+        <h3>📍 計算車程時間</h3>
+        <p class="hint">選擇兩個車站，估算中間車程（歷史平均）</p>
+        <div class="journey-row">
+          <label>上車站</label>
+          <select id="fromStopSelect">
+            <option value="">— 選擇上車站 —</option>
+          </select>
+        </div>
+        <div class="journey-row">
+          <label>落車站</label>
+          <select id="toStopSelect">
+            <option value="">— 選擇落車站 —</option>
+          </select>
+        </div>
+        <button id="calcJourneyBtn" class="calc-btn">計算車程</button>
+        <div id="journeyResult" class="journey-result hidden"></div>
+      </div>
+
       <button class="back-btn" onclick="goBack(2)">← 返回</button>
     </section>
+
 
     <!-- Step 4: 到站時間 -->
     <section class="card hidden" id="step4">
