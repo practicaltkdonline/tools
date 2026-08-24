@@ -191,9 +191,21 @@ async function searchRoute() {
     renderDirectionBar();
     directionBar.classList.remove("hidden");
 
+    const onJourney = !journeyView.classList.contains("hidden");
+
     // 預設第一個方向
     await selectDirection(directions[0]);
-    showMainView();
+
+    if (onJourney) {
+      // 留在車程畫面，只更新起終點
+      journeyView.classList.remove("hidden");
+      mainView.classList.add("hidden");
+      fabJourney.classList.add("hidden");
+      populateJourneySelects();
+      journeyResult.classList.add("hidden");
+    } else {
+      showMainView();
+    }
   } catch (err) {
     console.error(err);
     alert("查詢失敗，請稍後再試\n" + err.message);
@@ -243,8 +255,13 @@ async function selectDirection(dir) {
   }
   currentDirInfo.innerHTML = infoHtml;
   currentDirInfo.classList.remove("hidden");
-  stopList.innerHTML = `<div class="eta-loading">載入車站中...</div>`;
-  mainView.classList.remove("hidden");
+
+  const onJourney = !journeyView.classList.contains("hidden");
+
+  if (!onJourney) {
+    stopList.innerHTML = `<div class="eta-loading">載入車站中...</div>`;
+    mainView.classList.remove("hidden");
+  }
 
   // 如果在車程頁，也更新下拉
   if (!journeyView.classList.contains("hidden")) {
@@ -368,11 +385,13 @@ async function selectDirection(dir) {
     });
 
     state.stops = merged;
-    renderStopList();
 
-    // 若在車程頁，更新下拉
-    if (!journeyView.classList.contains("hidden")) {
+    if (onJourney) {
+      // 車程畫面：只更新起終點，不顯示車站列表
       populateJourneySelects();
+      journeyResult.classList.add("hidden");
+    } else {
+      renderStopList();
     }
   } catch (err) {
     console.error(err);
