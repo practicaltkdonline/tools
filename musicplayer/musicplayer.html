@@ -214,8 +214,8 @@
         <div class="hover-line" id="hoverLine"></div>
         <div class="hover-tip" id="hoverTip">0:00</div>
         <div class="cue-menu" id="cueMenu">
-          <button type="button" id="cueAddBtn">加入撈點</button>
-          <button type="button" id="cueDelBtn" style="display:none;background:#3f1d1d;color:#fda4af">刪除此撈點</button>
+          <button type="button" id="cueAddBtn">加入錨點</button>
+          <button type="button" id="cueDelBtn" style="display:none;background:#3f1d1d;color:#fda4af">刪除此錨點</button>
         </div>
       </div>
       <div class="times">
@@ -225,7 +225,7 @@
       </div>
       <div class="controls">
         <div class="transport">
-          <button class="cue-nav" id="prevCue" title="上一個撈點（Shift+&lt;）" aria-label="上一個撈點">
+          <button class="cue-nav" id="prevCue" title="上一個錨點（Shift+&lt;）" aria-label="上一個錨點">
             <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="5" width="2.4" height="14" rx="0.6"/><path d="M20 5v14L8.2 12z"/></svg>
           </button>
           <button id="prev" title="上一首" aria-label="上一首">
@@ -235,7 +235,7 @@
           <button id="next" title="下一首" aria-label="下一首">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.2 5v14L11.8 12z"/><path d="M12.2 5v14L21.8 12z"/></svg>
           </button>
-          <button class="cue-nav" id="nextCue" title="下一個撈點（Shift+&gt;）" aria-label="下一個撈點">
+          <button class="cue-nav" id="nextCue" title="下一個錨點（Shift+&gt;）" aria-label="下一個錨點">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14L15.8 12z"/><rect x="18.6" y="5" width="2.4" height="14" rx="0.6"/></svg>
           </button>
         </div>
@@ -519,7 +519,7 @@
       }
       list.innerHTML = cues.map((sec, i) =>
         `<span class="cue-chip" data-sec="${sec}">
-          撈點 ${i+1} ${fmt(sec)}
+          錨點 ${i+1} ${fmt(sec)}
           <button type="button" data-delcue="${sec}">✕</button>
         </span>`
       ).join("");
