@@ -1,1 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>音波播放器</title>
+  <style>
+    :root {
+      --bg: #0b0d12;
+      --line: #2a3140;
+      --text: #eef2f8;
+      --muted: #8b95a8;
+      --accent: #5eead4;
+      --accent-2: #818cf8;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #1a2340 0%, transparent 50%),
+        radial-gradient(900px 500px at 100% 0%, #13241f 0%, transparent 45%),
+        var(--bg);
+      color: var(--text);
+      font-family: "SF Pro Display", "PingFang HK", "Noto Sans TC", system-ui, sans-serif;
+    }
+    body { display: flex; justify-content: center; padding: 24px 16px 40px; }
+    .app { width: min(920px, 100%); }
+    header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 12px; margin-bottom: 18px;
+    }
+    h1 { margin: 0; font-size: 1.35rem; letter-spacing: 0.04em; font-weight: 650; }
+    .sub { color: var(--muted); font-size: 0.85rem; }
+    .stage {
+      background: linear-gradient(180deg, #1a2030 0%, #12161f 100%);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px 18px 22px;
+      box-shadow: 0 20px 50px rgba(0,0,0,.35);
+    }
+    canvas#viz {
+      width: 100%; height: 180px; display: block;
+      border-radius: 14px; background: #0a0d14;
+    }
+    .meta { display: flex; align-items: center; gap: 14px; margin: 16px 0 12px; }
+    .art {
+      width: 64px; height: 64px; border-radius: 14px;
+      background: conic-gradient(from 200deg, #5eead4, #818cf8, #fb7185, #5eead4);
+      display: grid; place-items: center; font-size: 1.6rem; flex-shrink: 0;
+    }
+    .title { font-size: 1.1rem; font-weight: 650; }
+    .artist { color: var(--muted); font-size: 0.88rem; margin-top: 3px; }
+    .times {
+      display: flex; justify-content: space-between;
+      font-variant-numeric: tabular-nums; color: var(--muted);
+      font-size: 0.8rem; margin: 6px 2px 0;
+    }
+    .wave-seek {
+      position: relative;
+      height: 92px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0a0d14;
+      border: 1px solid #243044;
+      cursor: pointer;
+      user-select: none;
+      touch-action: none;
+    }
+    canvas#wave {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    .playhead {
+      position: absolute; top: 0; bottom: 0; width: 2px;
+      background: #fff;
+      box-shadow: 0 0 8px rgba(255,255,255,.7);
+      left: 0%;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .hover-line {
+      position: absolute; top: 0; bottom: 0; width: 1px;
+      background: rgba(255,255,255,.35);
+      left: -10px;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .hover-tip {
+      position: absolute; top: 6px;
+      transform: translateX(-50%);
+      background: #0f172a; border: 1px solid #334155;
+      color: #fff; font-size: 11px; padding: 2px 6px; border-radius: 6px;
+      pointer-events: none; opacity: 0; z-index: 3;
+      font-variant-numeric: tabular-nums;
+    }
+    .controls {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-top: 16px; flex-wrap: wrap;
+    }
+    .transport { display: flex; align-items: center; gap: 10px; }
+    button {
+      border: 0; background: #22293a; color: var(--text);
+      width: 46px; height: 46px; border-radius: 50%;
+      cursor: pointer; font-size: 1.05rem;
+    }
+    button#play {
+      width: 62px; height: 62px;
+      background: linear-gradient(180deg, #5eead4, #2dd4bf);
+      color: #06201b; font-size: 1.35rem; font-weight: 700;
+    }
+    button:hover { filter: brightness(1.08); }
+    .vol-box {
+      display: flex; align-items: center; gap: 8px;
+      color: var(--muted); min-width: 220px;
+    }
+    input[type="range"]#vol {
+      -webkit-appearance: none; appearance: none;
+      width: 160px; height: 22px; background: transparent; cursor: pointer;
+    }
+    input[type="range"]#vol::-webkit-slider-runnable-track {
+      height: 8px; border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent-2) var(--p, 70%), #2a3140 var(--p, 70%));
+    }
+    input[type="range"]#vol::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 16px; height: 16px;
+      margin-top: -4px; border-radius: 50%; background: #fff;
+    }
+    .vol-pct { width: 40px; text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
+    .playlist { margin-top: 16px; display: grid; gap: 6px; }
+    .track {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 12px;
+      background: #10151e; border: 1px solid transparent; cursor: pointer;
+    }
+    .track.active { border-color: #2dd4bf55; background: #12201c; }
+    .track small { color: var(--muted); margin-left: auto; }
+    .hint { margin-top: 12px; color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
+    .file-row { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+    label.file {
+      background: #22293a; padding: 8px 12px; border-radius: 10px;
+      cursor: pointer; font-size: 0.85rem;
+    }
+    input[type="file"] { display: none; }
+    .wave-status { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>音波播放器</h1>
+      <div class="sub">進度條顯示每段有沒有聲音 · 可拖去任意位置</div>
+    </header>
+    <div class="stage">
+      <canvas id="viz" width="900" height="180"></canvas>
+      <div class="meta">
+        <div class="art">♪</div>
+        <div>
+          <div class="title" id="title">尚未載入</div>
+          <div class="artist" id="artist">示範曲目或本機檔案</div>
+        </div>
+      </div>
+      <div class="wave-seek" id="seekBox">
+        <canvas id="wave" width="900" height="144"></canvas>
+        <div class="playhead" id="playhead"></div>
+        <div class="hover-line" id="hoverLine"></div>
+        <div class="hover-tip" id="hoverTip">0:00</div>
+      </div>
+      <div class="times">
+        <span id="cur">0:00</span>
+        <span class="wave-status" id="waveStatus">正在分析波形…</span>
+        <span id="dur">0:00</span>
+      </div>
+      <div class="controls">
+        <div class="transport">
+          <button id="prev" title="上一首">⏮</button>
+          <button id="play" title="播放／暫停">▶</button>
+          <button id="next" title="下一首">⏭</button>
+        </div>
+        <div class="vol-box">
+          <span>音量</span>
+          <input id="vol" type="range" min="0" max="100" value="80" />
+          <span class="vol-pct" id="volPct">80%</span>
+        </div>
+      </div>
+      <div class="file-row">
+        <label class="file">加入本機音樂
+          <input id="files" type="file" accept="audio/*" multiple />
+        </label>
+      </div>
+      <div class="playlist" id="list"></div>
+      <p class="hint">進度條像 YouTube／SoundCloud：柱子高＝那一段聲音大，幾乎沒柱＝靜音或很輕。中間刻度顯示分鐘／秒，方便對準段落。按住拖動可跳播。<br>iPhone 用 Safari 打開後，按「加入本機音樂」可從「檔案」App 選 MP3／M4A（iCloud Drive、下載項目也可）。無法直接讀取「音樂」App／Apple Music 曲庫，那是系統限制。</p>
+    </div>
+  </div>
+  <script>
+    const tracks = [
+      { title: "SoundHelix Song 1", artist: "T. Schürger", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+      { title: "SoundHelix Song 2", artist: "T. Schürger", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+      { title: "SoundHelix Song 3", artist: "T. Schürger", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" }
+    ];
 
+    const audio = new Audio();
+    audio.crossOrigin = "anonymous";
+    audio.preload = "metadata";
+
+    let actx, analyser, srcNode, freq, started = false;
+    let index = 0;
+    let peaks = [];
+    let peakDuration = 0;
+    let analyzing = false;
+    let analyzeToken = 0;
+
+    const $ = (id) => document.getElementById(id);
+    const viz = $("viz");
+    const vc = viz.getContext("2d");
+    const wave = $("wave");
+    const wc = wave.getContext("2d");
+    const seekBox = $("seekBox");
+    const playhead = $("playhead");
+    const hoverLine = $("hoverLine");
+    const hoverTip = $("hoverTip");
+
+    function fmt(t) {
+      if (!isFinite(t) || t < 0) return "0:00";
+      const m = Math.floor(t / 60);
+      const s = Math.floor(t % 60).toString().padStart(2, "0");
+      return m + ":" + s;
+    }
+
+    function ensureGraph() {
+      if (started) return;
+      actx = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = actx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.78;
+      srcNode = actx.createMediaElementSource(audio);
+      srcNode.connect(analyser);
+      analyser.connect(actx.destination);
+      freq = new Uint8Array(analyser.frequencyBinCount);
+      started = true;
+    }
+
+    async function offlineCtx() {
+      if (actx) return actx;
+      return new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    function computePeaks(buffer, bars = 360) {
+      const raw = buffer.getChannelData(0);
+      const ch2 = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : null;
+      const block = Math.max(1, Math.floor(raw.length / bars));
+      const out = new Array(bars);
+      for (let i = 0; i < bars; i++) {
+        const start = i * block;
+        const end = Math.min(raw.length, start + block);
+        let peak = 0, sum = 0, n = 0;
+        for (let j = start; j < end; j += 8) {
+          let s = Math.abs(raw[j]);
+          if (ch2) s = (s + Math.abs(ch2[j])) * 0.5;
+          if (s > peak) peak = s;
+          sum += s; n++;
+        }
+        const rms = n ? sum / n : 0;
+        out[i] = Math.min(1, peak * 0.65 + rms * 1.6);
+      }
+      return out;
+    }
+
+    function niceStep(dur) {
+      if (dur <= 30) return 5;
+      if (dur <= 90) return 10;
+      if (dur <= 180) return 15;
+      if (dur <= 360) return 30;
+      if (dur <= 720) return 60;
+      if (dur <= 1800) return 120;
+      return 300;
+    }
+
+    function drawWaveform() {
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const rect = seekBox.getBoundingClientRect();
+      const w = Math.max(300, Math.floor(rect.width * dpr));
+      const h = Math.max(80, Math.floor(rect.height * dpr));
+      if (wave.width !== w || wave.height !== h) {
+        wave.width = w; wave.height = h;
+      }
+      wc.clearRect(0, 0, w, h);
+      wc.fillStyle = "#0a0d14";
+      wc.fillRect(0, 0, w, h);
+
+      const labelH = 18 * dpr;
+      const mid = (h - labelH) / 2;
+      const played = audio.duration ? audio.currentTime / audio.duration : 0;
+      const dur = audio.duration || peakDuration || 0;
+
+      if (peaks.length) {
+        const n = peaks.length;
+        const gap = Math.max(1, Math.floor(w / n * 0.22));
+        const bw = Math.max(1, w / n - gap);
+        for (let i = 0; i < n; i++) {
+          const amp = Math.max(0.04, peaks[i]);
+          const hh = amp * ((h - labelH) * 0.42);
+          const x = (i / n) * w;
+          const playedBar = i / n <= played;
+          wc.fillStyle = playedBar ? "#5eead4" : "#334155";
+          wc.fillRect(x, mid - hh, bw, hh * 2);
+        }
+      } else {
+        wc.fillStyle = "#1e293b";
+        wc.fillRect(0, mid - 2 * dpr, w, 4 * dpr);
+      }
+
+      if (dur > 0) {
+        const step = niceStep(dur);
+        wc.font = `${11 * dpr}px "SF Pro Text", "PingFang HK", sans-serif`;
+        wc.textBaseline = "top";
+        for (let t = 0; t <= dur + 0.01; t += step) {
+          const x = (t / dur) * w;
+          wc.strokeStyle = "rgba(148,163,184,0.28)";
+          wc.lineWidth = Math.max(1, dpr * 0.6);
+          wc.beginPath();
+          wc.moveTo(x, 4 * dpr);
+          wc.lineTo(x, h - labelH - 2 * dpr);
+          wc.stroke();
+          wc.fillStyle = "#94a3b8";
+          const label = fmt(t);
+          if (t === 0) {
+            wc.textAlign = "left";
+            wc.fillText(label, x + 3 * dpr, h - labelH + 2 * dpr);
+          } else if (t >= dur - step * 0.25) {
+            wc.textAlign = "right";
+            wc.fillText(fmt(dur), w - 3 * dpr, h - labelH + 2 * dpr);
+          } else {
+            wc.textAlign = "center";
+            wc.fillText(label, x, h - labelH + 2 * dpr);
+          }
+        }
+      }
+    }
+
+    async function analyzeCurrent() {
+      const token = ++analyzeToken;
+      peaks = [];
+      peakDuration = 0;
+      $("waveStatus").textContent = "正在分析哪一段有聲音…";
+      drawWaveform();
+      const src = tracks[index].src;
+      try {
+        analyzing = true;
+        const res = await fetch(src);
+        if (!res.ok) throw new Error("fetch " + res.status);
+        const buf = await res.arrayBuffer();
+        if (token !== analyzeToken) return;
+        const decCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 44100, 44100);
+        // decode with a real AudioContext
+        const decoder = actx || new (window.AudioContext || window.webkitAudioContext)();
+        const decoded = await decoder.decodeAudioData(buf.slice(0));
+        if (token !== analyzeToken) return;
+        peaks = computePeaks(decoded, Math.min(480, Math.max(220, Math.floor(decoded.duration * 8))));
+        peakDuration = decoded.duration;
+        $("waveStatus").textContent = "高柱＝有聲／大聲　平線＝靜音";
+        drawWaveform();
+      } catch (err) {
+        console.warn(err);
+        $("waveStatus").textContent = "示範曲若無法分析，請加入本機音樂（波形更準）";
+        drawWaveform();
+      } finally {
+        analyzing = false;
+      }
+    }
+
+    function load(i) {
+      index = (i + tracks.length) % tracks.length;
+      const t = tracks[index];
+      audio.src = t.src;
+      $("title").textContent = t.title;
+      $("artist").textContent = t.artist;
+      playhead.style.left = "0%";
+      renderList();
+      audio.load();
+      analyzeCurrent();
+    }
+
+    function renderList() {
+      $("list").innerHTML = tracks.map((t, i) =>
+        `<div class="track ${i===index?'active':''}" data-i="${i}">
+          <span>${i===index?'▶':'○'}</span>
+          <span>${t.title}</span>
+          <small>${t.artist}</small>
+        </div>`
+      ).join("");
+      $("list").querySelectorAll(".track").forEach(el => {
+        el.onclick = () => { load(+el.dataset.i); play(); };
+      });
+    }
+
+    async function play() {
+      ensureGraph();
+      if (actx.state === "suspended") await actx.resume();
+      try { await audio.play(); $("play").textContent = "❚❚"; }
+      catch (e) { console.warn(e); }
+    }
+    function pause() {
+      audio.pause();
+      $("play").textContent = "▶";
+    }
+
+    $("play").onclick = () => audio.paused ? play() : pause();
+    $("prev").onclick = () => { load(index - 1); play(); };
+    $("next").onclick = () => { load(index + 1); play(); };
+
+    audio.addEventListener("ended", () => { load(index + 1); play(); });
+    audio.addEventListener("loadedmetadata", () => {
+      $("dur").textContent = fmt(audio.duration);
+    });
+    audio.addEventListener("timeupdate", () => {
+      if (!audio.duration) return;
+      const p = audio.currentTime / audio.duration;
+      playhead.style.left = (p * 100) + "%";
+      $("cur").textContent = fmt(audio.currentTime);
+      drawWaveform();
+    });
+
+    function posFromEvent(e) {
+      const r = seekBox.getBoundingClientRect();
+      const x = (e.clientX ?? (e.touches && e.touches[0].clientX) ?? 0) - r.left;
+      return Math.min(1, Math.max(0, x / r.width));
+    }
+    function seekTo(p) {
+      if (!audio.duration) return;
+      audio.currentTime = p * audio.duration;
+      playhead.style.left = (p * 100) + "%";
+      $("cur").textContent = fmt(audio.currentTime);
+      drawWaveform();
+    }
+
+    let dragging = false;
+    seekBox.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      seekBox.setPointerCapture(e.pointerId);
+      seekTo(posFromEvent(e));
+    });
+    seekBox.addEventListener("pointermove", (e) => {
+      const p = posFromEvent(e);
+      hoverLine.style.left = (p * 100) + "%";
+      hoverTip.style.left = (p * 100) + "%";
+      hoverTip.style.opacity = "1";
+      const dur = audio.duration || peakDuration || 0;
+      hoverTip.textContent = fmt(p * dur);
+      if (dragging) seekTo(p);
+    });
+    seekBox.addEventListener("pointerup", () => { dragging = false; });
+    seekBox.addEventListener("pointerleave", () => {
+      if (!dragging) {
+        hoverLine.style.left = "-10px";
+        hoverTip.style.opacity = "0";
+      }
+    });
+
+    function setVol(v) {
+      audio.volume = v / 100;
+      $("vol").value = v;
+      $("vol").style.setProperty("--p", v + "%");
+      $("volPct").textContent = v + "%";
+    }
+    $("vol").addEventListener("input", () => setVol(+$("vol").value));
+    setVol(80);
+
+    $("files").addEventListener("change", (e) => {
+      [...e.target.files].forEach(f => {
+        tracks.push({
+          title: f.name.replace(/\.[^.]+$/, ""),
+          artist: "本機檔案",
+          src: URL.createObjectURL(f)
+        });
+      });
+      renderList();
+    });
+
+    function drawViz() {
+      requestAnimationFrame(drawViz);
+      const w = viz.width, h = viz.height;
+      vc.fillStyle = "#0a0d14";
+      vc.fillRect(0, 0, w, h);
+      vc.strokeStyle = "#1c2433";
+      vc.beginPath();
+      vc.moveTo(0, h * 0.82);
+      vc.lineTo(w, h * 0.82);
+      vc.stroke();
+
+      if (!analyser) {
+        const t = Date.now() / 600;
+        for (let i = 0; i < 48; i++) {
+          const x = 20 + i * ((w - 40) / 48);
+          const hh = 8 + Math.abs(Math.sin(t + i * 0.2)) * 18;
+          vc.fillStyle = "rgba(94,234,212,0.25)";
+          vc.fillRect(x, h * 0.82 - hh, 8, hh);
+        }
+        return;
+      }
+      analyser.getByteFrequencyData(freq);
+      const n = 56;
+      const step = Math.floor(freq.length / n);
+      const gap = 4;
+      const bw = (w - 40) / n - gap;
+      for (let i = 0; i < n; i++) {
+        let v = 0;
+        for (let k = 0; k < step; k++) v += freq[i * step + k];
+        v /= step;
+        const hh = Math.max(4, (v / 255) * (h * 0.72));
+        const x = 20 + i * (bw + gap);
+        const y = h * 0.82 - hh;
+        const g = vc.createLinearGradient(0, y, 0, y + hh);
+        g.addColorStop(0, "#5eead4");
+        g.addColorStop(0.55, "#818cf8");
+        g.addColorStop(1, "#334155");
+        vc.fillStyle = g;
+        vc.fillRect(x, y, bw, hh);
+      }
+    }
+
+    window.addEventListener("resize", drawWaveform);
+    load(0);
+    drawViz();
+  </script>
+</body>
+</html>
