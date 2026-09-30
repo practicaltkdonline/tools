@@ -185,12 +185,17 @@
         </div>
       </div>
       <div class="file-row">
-        <label class="file">加入本機音樂
-          <input id="files" type="file" accept="audio/*" multiple />
+        <label class="file">加入音樂（建議）
+          <input id="files" type="file" accept=".mp3,.m4a,.aac,.wav,.ogg,.flac,.mp4,audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/*" multiple />
+        </label>
+        <label class="file">從檔案選任何檔
+          <input id="filesAny" type="file" accept="*/*" multiple />
         </label>
       </div>
       <div class="playlist" id="list"></div>
-      <p class="hint">進度條像 YouTube／SoundCloud：柱子高＝那一段聲音大，幾乎沒柱＝靜音或很輕。中間刻度顯示分鐘／秒，方便對準段落。按住拖動可跳播。<br>iPhone 用 Safari 打開後，按「加入本機音樂」可從「檔案」App 選 MP3／M4A（iCloud Drive、下載項目也可）。無法直接讀取「音樂」App／Apple Music 曲庫，那是系統限制。</p>
+      <p class="hint">進度條像 YouTube／SoundCloud：柱子高＝大聲，平＝靜音。中間有時間刻度，可拖動跳播。<br>
+      iPhone：若只見到 MP4、見不到 MP3，請按「從檔案選任何檔」→ 瀏覽 →「檔案」App，不要用相片／影片分頁。Safari 的 audio 過濾器常把選擇器開成影片庫。<br>
+      支援 MP3／M4A／AAC／WAV／MP4（只播聲音）。不能讀「音樂」App／Apple Music 曲庫。</p>
     </div>
   </div>
   <script>
@@ -201,8 +206,9 @@
     ];
 
     const audio = new Audio();
-    audio.crossOrigin = "anonymous";
     audio.preload = "metadata";
+    audio.playsInline = true;
+    audio.setAttribute("playsinline", "");
 
     let actx, analyser, srcNode, freq, started = false;
     let index = 0;
@@ -370,10 +376,16 @@
       }
     }
 
+    function applySrc(src) {
+      if (/^https?:/i.test(src)) audio.crossOrigin = "anonymous";
+      else audio.removeAttribute("crossorigin");
+      audio.src = src;
+    }
+
     function load(i) {
       index = (i + tracks.length) % tracks.length;
       const t = tracks[index];
-      audio.src = t.src;
+      applySrc(t.src);
       $("title").textContent = t.title;
       $("artist").textContent = t.artist;
       playhead.style.left = "0%";
@@ -399,7 +411,10 @@
       ensureGraph();
       if (actx.state === "suspended") await actx.resume();
       try { await audio.play(); $("play").textContent = "❚❚"; }
-      catch (e) { console.warn(e); }
+      catch (e) {
+        console.warn(e);
+        $("waveStatus").textContent = "播放失敗：" + (e.message || "請改用「從檔案選任何檔」選 MP3");
+      }
     }
     function pause() {
       audio.pause();
@@ -467,16 +482,28 @@
     $("vol").addEventListener("input", () => setVol(+$("vol").value));
     setVol(80);
 
-    $("files").addEventListener("change", (e) => {
-      [...e.target.files].forEach(f => {
+    const OK_EXT = /\.(mp3|m4a|aac|wav|ogg|flac|mp4|mpeg|m4b)$/i;
+    function addLocalFiles(fileList) {
+      const added = [];
+      [...fileList].forEach(f => {
+        const type = (f.type || "").toLowerCase();
+        const ok = type.startsWith("audio/") || type === "video/mp4" || type === "video/quicktime" || OK_EXT.test(f.name);
+        if (!ok) {
+          alert("不支援：" + f.name + "（請選 mp3 / m4a / aac / wav / mp4）");
+          return;
+        }
         tracks.push({
           title: f.name.replace(/\.[^.]+$/, ""),
-          artist: "本機檔案",
+          artist: "本機檔案 · " + (f.name.split(".").pop() || "").toUpperCase(),
           src: URL.createObjectURL(f)
         });
+        added.push(tracks.length - 1);
       });
       renderList();
-    });
+      if (added.length) { load(added[0]); play(); }
+    }
+    $("files").addEventListener("change", (e) => addLocalFiles(e.target.files));
+    $("filesAny").addEventListener("change", (e) => addLocalFiles(e.target.files));
 
     function drawViz() {
       requestAnimationFrame(drawViz);
