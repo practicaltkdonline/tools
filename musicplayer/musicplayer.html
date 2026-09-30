@@ -105,10 +105,52 @@
       width: 46px; height: 46px; border-radius: 50%;
       cursor: pointer; font-size: 1.05rem;
     }
+    .transport button {
+      width: 48px; height: 48px;
+      border: 2px solid #e8eef6;
+      background: transparent;
+      color: #e8eef6;
+      display: grid; place-items: center; padding: 0;
+    }
+    .transport button svg { width: 22px; height: 22px; display: block; }
+    .transport button.cue-nav {
+      border-color: #fbbf24;
+      color: #fbbf24;
+    }
     button#play {
       width: 62px; height: 62px;
+      border: 0;
       background: linear-gradient(180deg, #5eead4, #2dd4bf);
       color: #06201b; font-size: 1.35rem; font-weight: 700;
+    }
+    .cue-menu {
+      position: absolute; z-index: 8;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 6px;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    }
+    .cue-menu button {
+      width: auto; height: auto; border-radius: 8px;
+      padding: 8px 12px; font-size: 0.85rem;
+      background: #1e293b;
+    }
+    .cue-list {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      margin-top: 10px;
+    }
+    .cue-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #1b2436; border: 1px solid #f59e0b55;
+      color: #fbbf24; border-radius: 999px;
+      padding: 4px 8px 4px 10px; font-size: 0.78rem;
+      font-variant-numeric: tabular-nums; cursor: pointer;
+    }
+    .cue-chip button {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #3f1d1d; color: #fb7185; font-size: 0.7rem;
     }
     button:hover { filter: brightness(1.08); }
     .vol-box {
@@ -136,6 +178,11 @@
     }
     .track.active { border-color: #2dd4bf55; background: #12201c; }
     .track small { color: var(--muted); margin-left: auto; }
+    .track .del {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: #2a1620; color: #fb7185; font-size: 0.85rem;
+      flex-shrink: 0;
+    }
     .hint { margin-top: 12px; color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
     .file-row { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
     label.file {
@@ -166,6 +213,10 @@
         <div class="playhead" id="playhead"></div>
         <div class="hover-line" id="hoverLine"></div>
         <div class="hover-tip" id="hoverTip">0:00</div>
+        <div class="cue-menu" id="cueMenu">
+          <button type="button" id="cueAddBtn">加入撈點</button>
+          <button type="button" id="cueDelBtn" style="display:none;background:#3f1d1d;color:#fda4af">刪除此撈點</button>
+        </div>
       </div>
       <div class="times">
         <span id="cur">0:00</span>
@@ -174,9 +225,19 @@
       </div>
       <div class="controls">
         <div class="transport">
-          <button id="prev" title="上一首">⏮</button>
-          <button id="play" title="播放／暫停">▶</button>
-          <button id="next" title="下一首">⏭</button>
+          <button class="cue-nav" id="prevCue" title="上一個撈點（Shift+&lt;）" aria-label="上一個撈點">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="5" width="2.4" height="14" rx="0.6"/><path d="M20 5v14L8.2 12z"/></svg>
+          </button>
+          <button id="prev" title="上一首" aria-label="上一首">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 5v14L2.2 12z"/><path d="M21.8 5v14L12.2 12z"/></svg>
+          </button>
+          <button id="play" title="播放／暫停" aria-label="播放或暫停">▶</button>
+          <button id="next" title="下一首" aria-label="下一首">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.2 5v14L11.8 12z"/><path d="M12.2 5v14L21.8 12z"/></svg>
+          </button>
+          <button class="cue-nav" id="nextCue" title="下一個撈點（Shift+&gt;）" aria-label="下一個撈點">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14L15.8 12z"/><rect x="18.6" y="5" width="2.4" height="14" rx="0.6"/></svg>
+          </button>
         </div>
         <div class="vol-box">
           <span>音量</span>
@@ -184,6 +245,7 @@
           <span class="vol-pct" id="volPct">80%</span>
         </div>
       </div>
+      <div class="cue-list" id="cueList"></div>
       <div class="file-row">
         <label class="file">加入音樂（建議）
           <input id="files" type="file" accept=".mp3,.m4a,.aac,.wav,.ogg,.flac,.mp4,audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/*" multiple />
@@ -199,11 +261,7 @@
     </div>
   </div>
   <script>
-    const tracks = [
-      { title: "SoundHelix Song 1", artist: "T. Schürger", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
-      { title: "SoundHelix Song 2", artist: "T. Schürger", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
-      { title: "SoundHelix Song 3", artist: "T. Schürger", src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" }
-    ];
+    const tracks = [];
 
     const audio = new Audio();
     audio.preload = "metadata";
@@ -343,9 +401,25 @@
           }
         }
       }
+
+      const cues = (tracks[index] && tracks[index].cues) || [];
+      const dur2 = audio.duration || peakDuration || 0;
+      cues.forEach((sec) => {
+        if (!dur2) return;
+        const x = (sec / dur2) * w;
+        wc.fillStyle = "#fbbf24";
+        wc.beginPath();
+        wc.moveTo(x, 2 * dpr);
+        wc.lineTo(x - 5 * dpr, 12 * dpr);
+        wc.lineTo(x + 5 * dpr, 12 * dpr);
+        wc.closePath();
+        wc.fill();
+        wc.fillRect(x - dpr, 12 * dpr, 2 * dpr, h - labelH - 14 * dpr);
+      });
     }
 
     async function analyzeCurrent() {
+      if (!tracks[index]) return;
       const token = ++analyzeToken;
       peaks = [];
       peakDuration = 0;
@@ -376,6 +450,29 @@
       }
     }
 
+    function removeTrack(i) {
+      if (i < 0 || i >= tracks.length) return;
+      const src = tracks[i].src;
+      const removingCurrent = i === index;
+      const wasPlaying = !audio.paused;
+      tracks.splice(i, 1);
+      if (src.startsWith("blob:")) try { URL.revokeObjectURL(src); } catch (_) {}
+      if (!tracks.length) {
+        pause();
+        audio.removeAttribute("src");
+        load(0);
+        return;
+      }
+      if (removingCurrent) {
+        const next = Math.min(i, tracks.length - 1);
+        load(next);
+        if (wasPlaying) play();
+      } else {
+        if (i < index) index -= 1;
+        renderList();
+      }
+    }
+
     function applySrc(src) {
       if (/^https?:/i.test(src)) audio.crossOrigin = "anonymous";
       else audio.removeAttribute("crossorigin");
@@ -383,27 +480,145 @@
     }
 
     function load(i) {
-      index = (i + tracks.length) % tracks.length;
+      if (!tracks.length) {
+        index = 0;
+        $("title").textContent = "尚未載入";
+        $("artist").textContent = "請加入本機音樂";
+        peaks = [];
+        playhead.style.left = "0%";
+        $("cur").textContent = "0:00";
+        $("dur").textContent = "0:00";
+        $("waveStatus").textContent = "未有曲目";
+        renderList();
+        drawWaveform();
+        return;
+      }
+      index = ((i % tracks.length) + tracks.length) % tracks.length;
       const t = tracks[index];
       applySrc(t.src);
       $("title").textContent = t.title;
       $("artist").textContent = t.artist;
       playhead.style.left = "0%";
       renderList();
+      renderCues();
       audio.load();
       analyzeCurrent();
     }
 
+    function currentCues() {
+      if (!tracks[index]) return [];
+      if (!tracks[index].cues) tracks[index].cues = [];
+      return tracks[index].cues;
+    }
+    function renderCues() {
+      const list = $("cueList");
+      const cues = currentCues().slice().sort((a,b) => a-b);
+      if (!cues.length) {
+        list.innerHTML = "";
+        return;
+      }
+      list.innerHTML = cues.map((sec, i) =>
+        `<span class="cue-chip" data-sec="${sec}">
+          撈點 ${i+1} ${fmt(sec)}
+          <button type="button" data-delcue="${sec}">✕</button>
+        </span>`
+      ).join("");
+      list.querySelectorAll(".cue-chip").forEach(el => {
+        el.onclick = (e) => {
+          if (e.target.closest("[data-delcue]")) return;
+          seekToTime(+el.dataset.sec);
+        };
+      });
+      list.querySelectorAll("[data-delcue]").forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          removeCue(+btn.dataset.delcue);
+        };
+      });
+    }
+    function addCue(sec) {
+      if (!tracks[index] || !isFinite(sec)) return;
+      const cues = currentCues();
+      if (cues.some(c => Math.abs(c - sec) < 0.35)) return;
+      cues.push(Math.max(0, sec));
+      cues.sort((a,b) => a-b);
+      renderCues();
+      drawWaveform();
+    }
+    function removeCue(sec) {
+      if (!tracks[index]) return;
+      tracks[index].cues = currentCues().filter(c => Math.abs(c - sec) > 0.2);
+      renderCues();
+      drawWaveform();
+    }
+    function cueNear(sec, pxTol = 10) {
+      const dur = audio.duration || peakDuration || 0;
+      if (!dur) return null;
+      const w = seekBox.getBoundingClientRect().width;
+      let best = null, bestD = Infinity;
+      currentCues().forEach(c => {
+        const d = Math.abs((c / dur) * w - (sec / dur) * w);
+        if (d < bestD) { bestD = d; best = c; }
+      });
+      return bestD <= pxTol ? best : null;
+    }
+    function seekToTime(sec) {
+      if (!audio.duration) return;
+      audio.currentTime = Math.min(audio.duration, Math.max(0, sec));
+      const p = audio.currentTime / audio.duration;
+      playhead.style.left = (p * 100) + "%";
+      $("cur").textContent = fmt(audio.currentTime);
+      drawWaveform();
+    }
+    function jumpPrevCue() {
+      if (!tracks.length) return;
+      const t = audio.currentTime || 0;
+      const prevs = currentCues().filter(c => c < t - 0.35);
+      if (prevs.length) {
+        seekToTime(prevs[prevs.length - 1]);
+        return;
+      }
+      if (t > 0.4) { restartCurrent(); return; }
+      const wasPlaying = !audio.paused;
+      load(index - 1);
+      if (wasPlaying) play();
+    }
+    function jumpNextCue() {
+      if (!tracks.length) return;
+      const t = audio.currentTime || 0;
+      const nexts = currentCues().filter(c => c > t + 0.35);
+      if (nexts.length) {
+        seekToTime(nexts[0]);
+        return;
+      }
+      load(index + 1);
+      play();
+    }
+
     function renderList() {
+      if (!tracks.length) {
+        $("list").innerHTML = `<div class="track" style="cursor:default;opacity:.7">播放列表是空的，請加入音樂</div>`;
+        return;
+      }
       $("list").innerHTML = tracks.map((t, i) =>
         `<div class="track ${i===index?'active':''}" data-i="${i}">
           <span>${i===index?'▶':'○'}</span>
           <span>${t.title}</span>
           <small>${t.artist}</small>
+          <button class="del" data-del="${i}" title="刪除">✕</button>
         </div>`
       ).join("");
       $("list").querySelectorAll(".track").forEach(el => {
-        el.onclick = () => { load(+el.dataset.i); play(); };
+        el.onclick = (e) => {
+          if (e.target.closest("[data-del]")) return;
+          load(+el.dataset.i); play();
+        };
+      });
+      $("list").querySelectorAll("[data-del]").forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          removeTrack(+btn.dataset.del);
+        };
       });
     }
 
@@ -421,11 +636,39 @@
       $("play").textContent = "▶";
     }
 
-    $("play").onclick = () => audio.paused ? play() : pause();
-    $("prev").onclick = () => { load(index - 1); play(); };
-    $("next").onclick = () => { load(index + 1); play(); };
+    $("play").onclick = () => {
+      if (!tracks.length) return;
+      audio.paused ? play() : pause();
+    };
+    function restartCurrent() {
+      audio.currentTime = 0;
+      playhead.style.left = "0%";
+      $("cur").textContent = "0:00";
+      drawWaveform();
+    }
+    $("prev").onclick = () => {
+      if (!tracks.length) return;
+      if ((audio.currentTime || 0) > 0.4) {
+        restartCurrent();
+        return;
+      }
+      const wasPlaying = !audio.paused;
+      load(index - 1);
+      if (wasPlaying) play();
+    };
+    $("next").onclick = () => {
+      if (!tracks.length) return;
+      load(index + 1);
+      play();
+    };
+    $("prevCue").onclick = jumpPrevCue;
+    $("nextCue").onclick = jumpNextCue;
 
-    audio.addEventListener("ended", () => { load(index + 1); play(); });
+    audio.addEventListener("ended", () => {
+      if (!tracks.length) return;
+      if (index < tracks.length - 1) { load(index + 1); play(); }
+      else pause();
+    });
     audio.addEventListener("loadedmetadata", () => {
       $("dur").textContent = fmt(audio.duration);
     });
@@ -451,10 +694,53 @@
     }
 
     let dragging = false;
+    let holdTimer = null;
+    let holdPos = 0;
+    let menuOpen = false;
+    let startX = 0;
+    const cueMenu = $("cueMenu");
+
+    function hideCueMenu() {
+      menuOpen = false;
+      cueMenu.style.display = "none";
+    }
+    function showCueMenu(p, clientX, box) {
+      menuOpen = true;
+      dragging = false;
+      const dur = audio.duration || peakDuration || 0;
+      const sec = p * dur;
+      const near = cueNear(sec);
+      holdPos = near != null ? near : sec;
+      $("cueAddBtn").style.display = near == null ? "inline-block" : "none";
+      $("cueDelBtn").style.display = near != null ? "inline-block" : "none";
+      cueMenu.style.display = "block";
+      const left = Math.min(box.width - 130, Math.max(8, p * box.width - 40));
+      cueMenu.style.left = left + "px";
+      cueMenu.style.top = "8px";
+    }
+    $("cueAddBtn").onclick = (e) => {
+      e.stopPropagation();
+      addCue(holdPos);
+      hideCueMenu();
+    };
+    $("cueDelBtn").onclick = (e) => {
+      e.stopPropagation();
+      removeCue(holdPos);
+      hideCueMenu();
+    };
+
     seekBox.addEventListener("pointerdown", (e) => {
-      dragging = true;
+      if (e.target.closest(".cue-menu")) return;
+      hideCueMenu();
+      dragging = false;
+      startX = e.clientX;
+      const p = posFromEvent(e);
+      holdPos = p * (audio.duration || peakDuration || 0);
       seekBox.setPointerCapture(e.pointerId);
-      seekTo(posFromEvent(e));
+      clearTimeout(holdTimer);
+      holdTimer = setTimeout(() => {
+        showCueMenu(p, e.clientX, seekBox.getBoundingClientRect());
+      }, 520);
     });
     seekBox.addEventListener("pointermove", (e) => {
       const p = posFromEvent(e);
@@ -463,14 +749,31 @@
       hoverTip.style.opacity = "1";
       const dur = audio.duration || peakDuration || 0;
       hoverTip.textContent = fmt(p * dur);
+      const pressed = (e.buttons & 1) === 1;
+      if (!pressed) {
+        dragging = false;
+        return;
+      }
+      if (Math.abs(e.clientX - startX) > 8 && !menuOpen) {
+        clearTimeout(holdTimer);
+        dragging = true;
+      }
       if (dragging) seekTo(p);
     });
-    seekBox.addEventListener("pointerup", () => { dragging = false; });
+    seekBox.addEventListener("pointerup", (e) => {
+      clearTimeout(holdTimer);
+      if (!menuOpen && !dragging) seekTo(posFromEvent(e));
+      dragging = false;
+      try { seekBox.releasePointerCapture(e.pointerId); } catch (_) {}
+    });
+    seekBox.addEventListener("pointercancel", (e) => {
+      clearTimeout(holdTimer);
+      dragging = false;
+      try { seekBox.releasePointerCapture(e.pointerId); } catch (_) {}
+    });
     seekBox.addEventListener("pointerleave", () => {
-      if (!dragging) {
-        hoverLine.style.left = "-10px";
-        hoverTip.style.opacity = "0";
-      }
+      hoverLine.style.left = "-10px";
+      hoverTip.style.opacity = "0";
     });
 
     function setVol(v) {
@@ -495,7 +798,8 @@
         tracks.push({
           title: f.name.replace(/\.[^.]+$/, ""),
           artist: "本機檔案 · " + (f.name.split(".").pop() || "").toUpperCase(),
-          src: URL.createObjectURL(f)
+          src: URL.createObjectURL(f),
+          cues: []
         });
         added.push(tracks.length - 1);
       });
@@ -548,6 +852,25 @@
     }
 
     window.addEventListener("resize", drawWaveform);
+    window.addEventListener("keydown", (e) => {
+      const tag = (e.target && e.target.tagName) || "";
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (!tracks.length) return;
+        audio.paused ? play() : pause();
+        return;
+      }
+      if (e.shiftKey && (e.key === "<" || e.key === "," || e.code === "Comma")) {
+        e.preventDefault();
+        jumpPrevCue();
+        return;
+      }
+      if (e.shiftKey && (e.key === ">" || e.key === "." || e.code === "Period")) {
+        e.preventDefault();
+        jumpNextCue();
+      }
+    });
     load(0);
     drawViz();
   </script>
